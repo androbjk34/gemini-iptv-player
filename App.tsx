@@ -1,18 +1,35 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Player } from './components/Player';
-import { Settings } from './components/Settings';
-import type { Channel, Program, Category } from './types';
+import type { Channel, Category } from './types';
 import { TvIcon } from './components/Icons';
 
-
-const formatEpgTime = (timeString: string): string => {
-  if (timeString.length < 12) return "N/A";
-  const hour = timeString.substring(8, 10);
-  const minute = timeString.substring(10, 12);
-  return `${hour}:${minute}`;
-};
+const DEFAULT_M3U_CONTENT = `#EXTM3U
+#EXTINF:-1 tvg-id="Sinema Tv.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinematv_logo_A0CC7C58-E100-4C18-8B8D-BF961C4F785E.png"  group-title="Sinema", Sinema TV
+http://65.108.239.207/sinema/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv 2.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinema2_logo_C0C84D85-E6DD-4807-B52F-277AD04EAE22.png" group-title="Sinema", Sinema TV 2
+http://65.108.239.207/sinema2/index.m3u8
+#EXTINF:-1 tvg-id="SİNEMA YERLİ HD.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemayerli_logo_75EF9BC4-3582-455A-BB02-47FAFD00CEA0.png" group-title="Sinema", Sinema Yerli
+http://apx-me.com:8880/live/live:persian_share/Hs6guU9ziF/49303.ts
+#EXTINF:-1 tvg-id="SİNEMA YERLİ 2 HD.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemayerli2_logo_6C526B31-1CD4-4F36-B514-FDB85BF311F5.png" group-title="Sinema", Sinema Yerli 2
+http://apx-me.com:8880/live/live:persian_share/Hs6guU9ziF/49293.ts
+#EXTINF:-1 tvg-id="Sinema Tv Aile.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemaaile_logo_B2AC3808-8447-4546-80EF-EA50B34D6089.png" group-title="Sinema",Sinema Aile
+http://65.108.239.207/sinemaaile/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv Aile 2.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemaaile2_logo_AD8E0B38-BE08-48CD-ACF5-28DB2419266C.png" group-title="Sinema", Sinema Aile 2
+http://apx-me.com:8880/live/live:persian_share/Hs6guU9ziF/49302.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv Comedy.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemakomedi_logo_16AD0158-3FF7-4897-93A7-26577BC1EC33.png"  group-title="Sinema",Sinema Komedi
+http://65.108.239.207/sinemakomedi/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv Comedy 2.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemakomedi2_logo_D70C1FCF-C2FF-4A95-980E-1454B5728647.png" group-title="Sinema", Sinema Komedi 2
+http://apx-me.com:8880/live/live:persian_share/Hs6guU9ziF/49306.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv Aksiyon.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemaaksiyon_logo_ECCA8162-A617-4236-82AD-BE14CFBE4C8D.png"  group-title="Sinema", Sinema Aksiyon
+http://65.108.239.207/sinemaaksiyon/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv Aksiyon 2.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinemaaksiyon2_logo_1E3AE25E-8ED5-4388-BF6E-6A902F87DF27.png" group-title="Sinema",Sinema Aksiyon 2
+http://65.108.239.207/sinemaaksiyon2/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv 1001.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinema1001_logo_CA7B6954-4A94-455B-9A1F-5FC54D88B982.png" group-title="Sinema",Sinema 1001
+http://65.108.239.207/sinema1001/index.m3u8
+#EXTINF:-1 tvg-id="Sinema Tv 1002.tr" tvg-logo="https://www.tivibu.com.tr/uploads/ChannelFiles/sinema1002_logo_FEC606FA-0E12-4B71-AE3A-E9879A6AB678.png" group-title="Sinema", Sinema 1002
+http://65.108.239.207/sinema1002/index.m3u8`;
 
 const parseM3U = (data: string): { channels: Channel[], categories: Category[] } => {
     const lines = data.split('\n');
@@ -51,7 +68,6 @@ const parseM3U = (data: string): { channels: Channel[], categories: Category[] }
                 logo,
                 streamUrl,
                 category: categoryName,
-                epg: [],
             });
         }
     }
@@ -65,118 +81,56 @@ const parseM3U = (data: string): { channels: Channel[], categories: Category[] }
 
 
 export default function App(): React.ReactElement {
-  const [config, setConfig] = useState<{ m3uUrl: string | null; epgUrl: string | null }>({ m3uUrl: null, epgUrl: null });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
-  const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [channels, setChannels] = React.useState<Channel[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
+  const [selectedChannel, setSelectedChannel] = React.useState<Channel | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [isPlayerFullscreen, setIsPlayerFullscreen] = React.useState(false);
+  const [favoriteChannelIds, setFavoriteChannelIds] = React.useState<Set<string>>(new Set());
   
-  useEffect(() => {
-    const savedM3uUrl = localStorage.getItem('iptv_m3u_url');
-    const savedEpgUrl = localStorage.getItem('iptv_epg_url');
-    const savedFavorites = localStorage.getItem('iptv_favorites');
-
-    if (savedFavorites) {
-        setFavoriteChannelIds(new Set(JSON.parse(savedFavorites)));
-    }
-
-    if (savedM3uUrl) {
-        setConfig({ m3uUrl: savedM3uUrl, epgUrl: savedEpgUrl });
-    } else {
-        setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadData = async () => {
-        if (!config.m3uUrl) return;
-        
+  React.useEffect(() => {
+    const initializeApp = () => {
         setIsLoading(true);
-        setError(null);
+        // Load favorites from local storage
+        const savedFavorites = localStorage.getItem('iptv_favorites');
+        if (savedFavorites) {
+            try {
+                setFavoriteChannelIds(new Set(JSON.parse(savedFavorites)));
+            } catch {
+                localStorage.removeItem('iptv_favorites');
+            }
+        }
         
+        // Always parse the hardcoded default content
         try {
-            const m3uResponse = await fetch(config.m3uUrl);
-            if (!m3uResponse.ok) throw new Error(`M3U fetch failed: ${m3uResponse.statusText}`);
-            const m3uText = await m3uResponse.text();
-            const { channels: parsedChannels, categories: parsedCategories } = parseM3U(m3uText);
-            
-            if (parsedChannels.length === 0) {
-                throw new Error("M3U playlist is empty or could not be parsed.");
-            }
-            
-            let finalChannels = parsedChannels;
-
-            if (config.epgUrl) {
-                try {
-                    const epgResponse = await fetch(config.epgUrl);
-                    if (epgResponse.ok) {
-                        const xmlText = await epgResponse.text();
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-                        
-                        const programmes = xmlDoc.getElementsByTagName('programme');
-                        const epgData: { [key: string]: Program[] } = {};
-
-                        for (const programme of programmes) {
-                          const channelId = programme.getAttribute('channel');
-                          const startTime = programme.getAttribute('start');
-                          const endTime = programme.getAttribute('stop');
-                          const title = programme.querySelector('title')?.textContent;
-                          const description = programme.querySelector('desc')?.textContent;
-
-                          if (channelId && startTime && endTime && title) {
-                            if (!epgData[channelId]) epgData[channelId] = [];
-                            epgData[channelId].push({
-                              title,
-                              description: description || '',
-                              startTime: formatEpgTime(startTime),
-                              endTime: formatEpgTime(endTime),
-                            });
-                          }
-                        }
-                        
-                        for (const channelId in epgData) {
-                            epgData[channelId].sort((a, b) => a.startTime.localeCompare(b.startTime));
-                        }
-
-                        finalChannels = parsedChannels.map(channel => ({
-                            ...channel,
-                            epg: epgData[channel.id] || [],
-                        }));
-                    } else {
-                        console.warn(`Failed to fetch EPG: ${epgResponse.statusText}`);
-                    }
-                } catch (epgError) {
-                    console.error("Failed to process EPG data:", epgError);
-                }
-            }
-
-            setChannels(finalChannels);
+            const { channels: parsedChannels, categories: parsedCategories } = parseM3U(DEFAULT_M3U_CONTENT);
+            setChannels(parsedChannels);
             setCategories(parsedCategories);
-            if (finalChannels.length > 0) {
-              setSelectedChannel(finalChannels[0]);
-            }
-
+            
+            // Restore last watched channel or default to first
+            const lastChannelId = localStorage.getItem('iptv_last_channel_id');
+            const foundChannel = lastChannelId ? parsedChannels.find(c => c.id === lastChannelId) : null;
+            setSelectedChannel(foundChannel || parsedChannels[0] || null);
         } catch (e: any) {
-            console.error("Failed to load data:", e);
-            setError(`Failed to load data: ${e.message}. Please check your URLs.`);
-            localStorage.removeItem('iptv_m3u_url');
-            localStorage.removeItem('iptv_epg_url');
-            setConfig({ m3uUrl: null, epgUrl: null });
+            console.error("Critical Error: Failed to parse default M3U content.", e);
+            // This is a developer error, the app will be in a broken state.
         } finally {
             setIsLoading(false);
         }
     };
+    
+    initializeApp();
+  }, []);
 
-    loadData();
-  }, [config]);
+  // Persist last selected channel
+  React.useEffect(() => {
+    if (selectedChannel) {
+        localStorage.setItem('iptv_last_channel_id', selectedChannel.id);
+    }
+  }, [selectedChannel]);
   
   const toggleFavorite = (channelId: string) => {
     setFavoriteChannelIds(prev => {
@@ -191,14 +145,14 @@ export default function App(): React.ReactElement {
     });
   };
 
-  const channelsWithFavorites = useMemo(() => {
+  const channelsWithFavorites = React.useMemo(() => {
     return channels.map(channel => ({
         ...channel,
         isFavorite: favoriteChannelIds.has(channel.id)
     }));
   }, [channels, favoriteChannelIds]);
 
-  const searchedChannels = useMemo(() => {
+  const searchedChannels = React.useMemo(() => {
     if (!searchQuery) return channelsWithFavorites;
     const lowerCaseQuery = searchQuery.toLowerCase();
     return channelsWithFavorites.filter((channel) => 
@@ -206,11 +160,11 @@ export default function App(): React.ReactElement {
     );
   }, [channelsWithFavorites, searchQuery]);
 
-  const channelsForPlayer = useMemo(() => {
+  const channelsForPlayer = React.useMemo(() => {
     if (selectedCategory === '__FAVORITES__') {
         return searchedChannels.filter(c => c.isFavorite);
     }
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== '__COLLAPSED__') {
         return searchedChannels.filter(c => c.category === selectedCategory);
     }
     return searchedChannels;
@@ -220,23 +174,13 @@ export default function App(): React.ReactElement {
     if (isSidebarOpen) setIsSidebarOpen(false);
   };
   
-  const handleConfigSaved = () => {
-    const savedM3uUrl = localStorage.getItem('iptv_m3u_url');
-    const savedEpgUrl = localStorage.getItem('iptv_epg_url');
-    setConfig({ m3uUrl: savedM3uUrl, epgUrl: savedEpgUrl });
-  };
-  
   if (isLoading) {
     return (
       <div className="flex flex-col h-screen bg-gray-900 text-white items-center justify-center space-y-4">
           <TvIcon className="w-16 h-16 text-teal-400 animate-pulse" />
-          <p className="text-xl font-semibold">Loading your playlist...</p>
+          <p className="text-xl font-semibold">Loading Player...</p>
       </div>
     );
-  }
-
-  if (!config.m3uUrl || error) {
-      return <Settings onConfigSaved={handleConfigSaved} initialError={error} />;
   }
 
   return (
