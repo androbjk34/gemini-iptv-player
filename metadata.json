@@ -1,0 +1,5 @@
+{
+  "name": "Gemini IPTV Player",
+  "description": "A sleek and modern IPTV player interface built with React and Tailwind CSS. It allows users to browse through categorized channels, search for specific channels, and watch streams in a clean, dark-themed player.",
+  "requestFramePermissions": []
+}
