@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { Category, Channel } from '../types';
 import { SearchIcon, TvIcon, ChevronLeftIcon, ChevronDownIcon, StarIcon } from './Icons';
 
@@ -13,7 +12,7 @@ interface SidebarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedCategory: string | null;
-  onSelectCategory: (categoryId: string | null) => void;
+  onSelectCategory: (categoryId: string | null | '__COLLAPSED__') => void;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   onToggleFavorite: (channelId: string) => void;
@@ -24,11 +23,9 @@ const ChannelItem: React.FC<{
   channel: Channel;
   isSelected: boolean;
   onSelect: () => void;
-  onToggleEpg: () => void;
   isSidebarOpen: boolean;
-  isEpgExpanded: boolean;
   onToggleFavorite: (channelId: string) => void;
-}> = ({ channel, isSelected, onSelect, onToggleEpg, isSidebarOpen, isEpgExpanded, onToggleFavorite }) => {
+}> = ({ channel, isSelected, onSelect, isSidebarOpen, onToggleFavorite }) => {
   return (
     <li>
       <div
@@ -65,45 +62,7 @@ const ChannelItem: React.FC<{
             >
                 <StarIcon filled={!!channel.isFavorite} className="w-5 h-5"/>
             </button>
-            <button
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent onSelect from firing
-                  onToggleEpg();
-                }}
-                className={`p-1 rounded-full ${ isSelected ? 'hover:bg-teal-500' : 'hover:bg-gray-600' } focus:outline-none focus:ring-1 focus:ring-teal-400`}
-                aria-label={`Toggle program guide for ${channel.name}`}
-                aria-expanded={isEpgExpanded}
-              >
-                <ChevronDownIcon
-                className={`w-5 h-5 flex-shrink-0 transition-all duration-300 ${
-                    isEpgExpanded ? 'rotate-180' : ''
-                } ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}
-                />
-            </button>
         </div>
-      </div>
-      <div
-        className={`overflow-hidden transition-all duration-500 ease-in-out pl-6 ${
-          isEpgExpanded ? 'max-h-96' : 'max-h-0'
-        }`}
-      >
-        <ul className="pt-2 pb-1 space-y-2 text-sm text-gray-400 border-l-2 border-gray-700 ml-5 pl-5">
-          {channel.epg.length > 0 ? channel.epg.map((program, index) => (
-            <li key={`${channel.id}-${program.title}-${index}`}>
-              <p className="font-semibold text-gray-200 flex items-center">
-                {program.startTime} - {program.endTime}
-                {index === 0 && (
-                  <span className="ml-2 text-xs font-bold text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full">
-                    LIVE
-                  </span>
-                )}
-              </p>
-              <p className="text-gray-300">{program.title}</p>
-            </li>
-          )) : (
-            <li><p>No program information available.</p></li>
-          )}
-        </ul>
       </div>
     </li>
   );
@@ -123,19 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleFavorite,
   hasFavorites,
 }) => {
-  const [expandedEpg, setExpandedEpg] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Collapse any open EPG when the category filter changes to keep the UI clean.
-    setExpandedEpg(null);
-  }, [selectedCategory]);
-
-  const handleEpgToggle = (channelId: string) => {
-    setExpandedEpg((prev) => (prev === channelId ? null : channelId));
-  };
-  
   const handleCategoryClick = (categoryId: string | null) => {
-    onSelectCategory(selectedCategory === categoryId ? null : categoryId);
+    onSelectCategory(selectedCategory === categoryId ? '__COLLAPSED__' : categoryId);
   };
 
   const renderChannelList = (channelList: Channel[]) => (
@@ -146,9 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           channel={channel}
           isSelected={selectedChannel?.id === channel.id}
           onSelect={() => onSelectChannel(channel)}
-          onToggleEpg={() => handleEpgToggle(channel.id)}
           isSidebarOpen={isSidebarOpen}
-          isEpgExpanded={expandedEpg === channel.id}
           onToggleFavorite={onToggleFavorite}
         />
       ))}
